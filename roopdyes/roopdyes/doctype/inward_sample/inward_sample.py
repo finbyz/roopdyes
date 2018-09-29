@@ -14,7 +14,8 @@ class InwardSample(Document):
 		if db.exists("Purchase Price" ,{ "product_name":self.item_code , "price_list":self.price_list}):
 			purchase_price = frappe.get_doc("Purchase Price",{"product_name":self.item_code,"price_list":self.price_list})
 			purchase_price.price = self.item_price
-			purchase_price.purchase_price = self.price_list
+			purchase_price.price_list = self.price_list
+			purchase_price.supplier = self.party
 			purchase_price.save()
 			#purchase_price.run_method('on_update_after_submit')
 
@@ -29,9 +30,10 @@ class InwardSample(Document):
 			purchase_price.date = self.date
 			purchase_price.price = self.item_price
 			purchase_price.price_list = self.price_list
+			purchase_price.supplier = self.party
 
 			purchase_price.save()
-			self.db_set('purchase_price' , purchase_price.name)
+			# self.db_set('purchase_price' , purchase_price.name)
 			purchase_price.submit()
 		frappe.db.commit()
 		frappe.msgprint(_("Purchase Price Updated"))
