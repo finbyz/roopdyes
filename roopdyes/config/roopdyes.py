@@ -87,5 +87,14 @@ def get_data():
 					"name": "LUT Detail"
 				},
 			]
+		},
+		{
+			"label": _("Paper Maintenance"),
+			"items": [
+				{
+					"type": "doctype",
+					"name": "Paper Maintenance",
+				}
+			]
 		}
 	]

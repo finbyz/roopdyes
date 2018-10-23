@@ -354,7 +354,8 @@ def upadte_item_price_daily():
 			
 	for row in data:
 		upadte_item_price(row.item, row.buying_price_list, row.per_unit_price)
-
+		
+	return "Latest price updated in Price List."
 @frappe.whitelist()
 def bom_before_save(self, method):
 	per_unit_price = flt(self.total_cost) / flt(self.quantity)
@@ -414,3 +415,9 @@ def update_outward_sample(doc_name):
 
 	return "Price Updated"
 
+@frappe.whitelist()
+def finish_production_order(name):
+	doc = frappe.get_doc("Production Order", name)
+	doc.db_set("status", "Completed")
+
+	return "Completed"

@@ -12,16 +12,19 @@ class PaperMaintenance(Document):
 
 @frappe.whitelist()
 def make_renew_doc(source_name, target_doc=None):
+
+	def update_paper(source, target, source_parent):
+		source.renewed = 1
+		source.save()
+		frappe.db.commit()
+		
 	doclist = get_mapped_doc("Paper Maintenance", source_name, {
 			"Paper Maintenance":{
-				"doctype": "Paper Maintenance",
-				# "field_map": {
-					# "total_working_days": "working_days",
-					# "total_extra_hours": "extra_hours"
-				# },
+				"doctype": "Paper Maintenance",	
 				"field_no_map": [
 					"document_expiry_date"
-				]
+				],
+				'postprocess':update_paper
 			}
 		}, target_doc)
 
