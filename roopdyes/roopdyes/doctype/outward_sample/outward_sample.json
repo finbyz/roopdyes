@@ -931,7 +931,7 @@
  "issingle": 0, 
  "istable": 0, 
  "max_attachments": 0, 
- "modified": "2018-10-04 12:04:03.753739", 
+ "modified": "2019-04-29 15:20:02.340737", 
  "modified_by": "Administrator", 
  "module": "RoopDyes", 
  "name": "Outward Sample", 
@@ -1022,11 +1022,11 @@
  "quick_entry": 0, 
  "read_only": 0, 
  "read_only_onload": 0, 
- "search_fields": "party_name,product_name", 
+ "search_fields": "party_name,ref_no", 
  "show_name_in_global_search": 0, 
  "sort_field": "modified", 
  "sort_order": "DESC", 
- "title_field": "ref_no", 
+ "title_field": "", 
  "track_changes": 1, 
  "track_seen": 0
 }

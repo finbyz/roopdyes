@@ -128,7 +128,8 @@ override_whitelisted_methods = {
 doc_events = {
 	"Stock Entry": {
 		"before_submit": "roopdyes.api.override_po_functions",
-		"on_submit": "roopdyes.api.se_on_submit"
+		"on_submit": "roopdyes.api.se_on_submit",
+		"before_cancel": "roopdyes.api.override_po_functions",
 	},
 	"BOM": {
 		"before_save": "roopdyes.api.bom_before_save",
