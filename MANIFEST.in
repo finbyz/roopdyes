@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include roopdyes *.css
+recursive-include roopdyes *.csv
+recursive-include roopdyes *.html
+recursive-include roopdyes *.ico
+recursive-include roopdyes *.js
+recursive-include roopdyes *.json
+recursive-include roopdyes *.md
+recursive-include roopdyes *.png
+recursive-include roopdyes *.py
+recursive-include roopdyes *.svg
+recursive-include roopdyes *.txt
+recursive-exclude roopdyes *.pyc
