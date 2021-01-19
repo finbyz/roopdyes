@@ -7,7 +7,7 @@ def get_data():
 		{
 			"module_name": "RoopDyes",
 			"color": "#FF888B",
-			"icon": "fa fa-flask",
+			"icon": "icon finbyz-chemical",
 			"type": "module",
 			"label": _("RoopDyes")
 		}

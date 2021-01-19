@@ -81,9 +81,14 @@ def cancel_jv(self):
 		jv.cancel()
 		self.db_set('duty_drawback_jv','')
 	
+def stock_entry_before_cancel(self,method):
+	if self.work_order:
+		pro_doc = frappe.get_doc("Work Order", self.work_order)
+		if pro_doc.batch:
+			pro_doc.db_set('batch',None)
 		
 @frappe.whitelist()
-def override_po_functions(self, method):
+def override_po_functions(self,method):
 	WorkOrder.get_status = get_status
 	WorkOrder.update_work_order_qty = update_work_order_qty
 
@@ -158,6 +163,8 @@ def stock_entry_on_cancel(self, method):
 		pro_doc = frappe.get_doc("Work Order", self.work_order)
 		if self.volume:		
 			update_po_volume(self, pro_doc)
+		if pro_doc.batch:
+			pro_doc.db_set('batch',None)
 		pro_doc.save()
 		frappe.db.commit()
 	

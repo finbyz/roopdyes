@@ -6,7 +6,7 @@ app_name = "roopdyes"
 app_title = "RoopDyes"
 app_publisher = "FinByz Tech Pvt Ltd"
 app_description = "Roopdyes App"
-app_icon = "fa fa-flask"
+app_icon = "finbyz finbyz-chemical"
 app_color = "#FF888B"
 app_email = "info@finbyz.com"
 app_license = "GPL 3.0"
@@ -146,7 +146,10 @@ doc_events = {
 			"roopdyes.api.se_on_submit",
 			"roopdyes.batch_valuation.stock_entry_on_submit",
 		],
-		"before_cancel": "roopdyes.api.override_po_functions",
+		"before_cancel": [
+			"roopdyes.api.override_po_functions",
+			"roopdyes.api.stock_entry_before_cancel",
+		],
 		"on_cancel":[
 			"roopdyes.batch_valuation.stock_entry_on_cancel",
 			"roopdyes.api.stock_entry_on_cancel"
