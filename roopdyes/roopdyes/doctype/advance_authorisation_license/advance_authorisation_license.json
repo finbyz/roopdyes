@@ -1,0 +1,247 @@
+{
+ "allow_rename": 1,
+ "autoname": "field:license_no",
+ "creation": "2018-12-18 15:26:24.876810",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "license_no",
+  "export_item",
+  "application_file_no",
+  "approved_qty",
+  "approved_amount",
+  "total_license_amount",
+  "currency",
+  "column_break3",
+  "status",
+  "date",
+  "application_file_date",
+  "remaining_export_qty",
+  "remaining_export_amount",
+  "remaining_license_amount",
+  "import_ratio",
+  "item_import_ratio",
+  "import_against_aal",
+  "imports",
+  "section_break1",
+  "total_import_qty",
+  "column_break1",
+  "total_import_amount",
+  "export_against_aal",
+  "exports",
+  "section_break2",
+  "total_export_qty",
+  "column_break2",
+  "total_export_amount"
+ ],
+ "fields": [
+  {
+   "fieldname": "license_no",
+   "fieldtype": "Data",
+   "label": "License No",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "export_item",
+   "fieldtype": "Link",
+   "label": "Export Item",
+   "options": "Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "application_file_no",
+   "fieldtype": "Data",
+   "label": "Application File No"
+  },
+  {
+   "fieldname": "approved_qty",
+   "fieldtype": "Float",
+   "label": "Export Approved Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "approved_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Import Approved Amount",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "total_license_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Export Approved Amount",
+   "reqd": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "column_break3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "\nOpen\nApplied for EODC\nClose"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "application_file_date",
+   "fieldtype": "Date",
+   "label": "Application File date"
+  },
+  {
+   "fieldname": "remaining_export_qty",
+   "fieldtype": "Float",
+   "label": "Remaining Export Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "remaining_export_amount",
+   "fieldtype": "Currency",
+   "label": "Remaining Export Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "remaining_license_amount",
+   "fieldtype": "Currency",
+   "label": "Remaining Import Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_ratio",
+   "fieldtype": "Section Break",
+   "label": "Import Ratio"
+  },
+  {
+   "fieldname": "item_import_ratio",
+   "fieldtype": "Table",
+   "label": "Item Import Ratio",
+   "options": "Item Import Ratio"
+  },
+  {
+   "fieldname": "import_against_aal",
+   "fieldtype": "Section Break",
+   "label": "Import Against AAL"
+  },
+  {
+   "fieldname": "imports",
+   "fieldtype": "Table",
+   "label": "Imports",
+   "options": "Import Against AAL"
+  },
+  {
+   "fieldname": "section_break1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_import_qty",
+   "fieldtype": "Float",
+   "label": "Actual Total Import Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_import_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Actual Total Import Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "export_against_aal",
+   "fieldtype": "Section Break",
+   "label": "Export Against AAL"
+  },
+  {
+   "fieldname": "exports",
+   "fieldtype": "Table",
+   "label": "Exports",
+   "options": "Export Against AAL"
+  },
+  {
+   "fieldname": "section_break2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_export_qty",
+   "fieldtype": "Float",
+   "label": "Actual Total Export Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_export_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Actual Total Export Amount",
+   "options": "currency",
+   "read_only": 1
+  }
+ ],
+ "icon": "fa fa-id-card-o",
+ "modified": "2020-11-11 19:04:02.250558",
+ "modified_by": "Administrator",
+ "module": "RoopDyes",
+ "name": "Advance Authorisation License",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Analytics",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

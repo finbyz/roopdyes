@@ -172,7 +172,8 @@ doc_events = {
 	},
 	"Purchase Invoice": {
 		"validate": "roopdyes.batch_valuation.pi_validate",
-		"on_cancel": "roopdyes.batch_valuation.pi_on_cancel",
+		"on_submit": "roopdyes.api.pi_on_submit",
+		"on_cancel": ["roopdyes.batch_valuation.pi_on_cancel","roopdyes.api.pi_on_cancel"],
 	},
 	"Landed Cost Voucher": {
 		"validate": "roopdyes.batch_valuation.lcv_validate",
@@ -180,6 +181,9 @@ doc_events = {
 		"on_cancel": [
 			"roopdyes.batch_valuation.lcv_on_cancel",
 		],
+	},
+	"Stock Ledger Entry": {
+		"before_submit": "roopdyes.api.sl_before_submit"
 	},
 	("Sales Invoice", "Purchase Invoice", "Payment Request", "Payment Entry", "Journal Entry", "Material Request", "Purchase Order", "Work Order", "Production Plan", "Stock Entry", "Quotation", "Sales Order", "Delivery Note", "Purchase Receipt", "Packing Slip"): {
 		"before_naming": "roopdyes.api.docs_before_naming",

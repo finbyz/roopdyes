@@ -121,6 +121,9 @@ class BallMillDataSheet(Document):
 		
 	def on_cancel(self):
 		if self.stock_entry:
+			for package in self.packaging:
+				if package.batch_no:
+					package.db_set('batch_no',None)
 			se = frappe.get_doc("Stock Entry",self.stock_entry)
 			se.cancel()
 			self.db_set('stock_entry','')

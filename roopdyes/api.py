@@ -21,15 +21,23 @@ def get_customer_ref_code(item_code, customer):
 
 @frappe.whitelist()	
 def si_on_submit(self, method):
-	pass
+	export_lic(self)
 	#create_jv(self)
 	# In exim app
 
 @frappe.whitelist()	
 def si_on_cancel(self, method):
-	pass
+	export_lic_cancel(self)
 	#cancel_jv(self)
 	# In exim app
+	
+@frappe.whitelist()
+def pi_on_submit(self, method):
+	import_lic(self)	
+
+@frappe.whitelist()
+def pi_on_cancel(self, method):
+	import_lic_cancel(self)
 	
 def create_jv(self):
 	abbr = frappe.db.get_value("Company", self.company, 'abbr')
@@ -916,3 +924,103 @@ def docs_before_naming(self, method):
 		fy_years = fy.split("-")
 		fiscal = fy_years[0][2:] + '-' + fy_years[1][2:]
 		self.fiscal = fiscal
+
+def sl_before_submit(self, method):
+	batch_qty_validation_with_date_time(self)
+	
+def batch_qty_validation_with_date_time(self):
+	if self.batch_no and not self.get("allow_negative_stock"):
+		batch_bal_after_transaction = flt(frappe.db.sql("""select sum(actual_qty)
+			from `tabStock Ledger Entry`
+			where warehouse=%s and item_code=%s and batch_no=%s and  timestamp(posting_date, posting_time) <= timestamp(%s, %s) """,
+			(self.warehouse, self.item_code, self.batch_no, self.posting_date, self.posting_time))[0][0])
+		
+		if flt(batch_bal_after_transaction) < 0:
+			frappe.throw(_("Stock balance in Batch {0} will become negative {1} for Item {2} at Warehouse {3} at date {4} and time {5}")
+				.format(self.batch_no, batch_bal_after_transaction, self.item_code, self.warehouse, self.posting_date, self.posting_time))
+
+
+def export_lic(self):
+	for row in self.items:
+		if row.advance_authorisation_license:
+			aal = frappe.get_doc("Advance Authorisation License", row.advance_authorisation_license)
+			if self.currency != "INR":
+				fob = flt(row.fob_value)/ flt(self.conversion_rate)
+			else:
+				fob = flt(row.fob_value)
+			aal.append("exports", {
+				"item_code": row.item_code,
+				"item_name": row.item_name,
+				"quantity": row.qty,
+				"uom": row.uom,
+				"fob_value" : fob,
+				"currency" : self.currency,
+				"shipping_bill_no": self.shipping_bill_number,
+				"shipping_bill_date": self.shipping_bill_date,
+				"port_of_loading" : self.port_of_loading,
+				"port_of_discharge" : self.port_of_discharge,
+				"sales_invoice" : self.name,
+			})
+
+			aal.total_export_qty = sum([flt(d.quantity) for d in aal.exports])
+			aal.total_export_amount = sum([flt(d.fob_value) for d in aal.exports])
+			aal.save()
+
+def export_lic_cancel(self):
+	doc_list = list(set([row.advance_authorisation_license for row in self.items if row.advance_authorisation_license]))
+
+	for doc_name in doc_list:
+		doc = frappe.get_doc("Advance Authorisation License", doc_name)
+		to_remove = []
+
+		for row in doc.exports:
+			if row.parent == doc_name and row.sales_invoice == self.name:
+				to_remove.append(row)
+
+		[doc.remove(row) for row in to_remove]
+		doc.total_export_qty = sum([flt(d.quantity) for d in doc.exports])
+		doc.total_export_amount = sum([flt(d.fob_value) for d in doc.exports])
+		doc.save()
+
+
+def import_lic(self):
+	for row in self.items:
+		if row.advance_authorisation_license:
+			aal = frappe.get_doc("Advance Authorisation License", row.advance_authorisation_license)
+			if self.currency != "INR":
+				cif = flt(row.cif_value)/ flt(self.conversion_rate)
+			else:
+				cif = flt(row.cif_value)
+			aal.append("imports", {
+				"item_code": row.item_code,
+				"item_name": row.item_name,
+				"quantity": row.qty,
+				"uom": row.uom,
+				"cif_value" : cif,
+				"currency" : self.currency,
+				"shipping_bill_no": self.shipping_bill,
+				"shipping_bill_date": self.shipping_bill_date,
+				"port_of_loading" : self.port_of_loading,
+				"port_of_discharge" : self.port_of_discharge,
+				"purchase_invoice" : self.name,
+			})
+
+			aal.total_import_qty = sum([flt(d.quantity) for d in aal.imports])
+			aal.total_import_amount = sum([flt(d.cif_value) for d in aal.imports])
+			aal.save()
+
+def import_lic_cancel(self):
+	doc_list = list(set([row.advance_authorisation_license for row in self.items if row.advance_authorisation_license]))
+
+	for doc_name in doc_list:
+		doc = frappe.get_doc("Advance Authorisation License", doc_name)
+		to_remove = []
+
+		for row in doc.imports:
+			if row.parent == doc_name and row.purchase_invoice == self.name:
+				to_remove.append(row)
+
+		[doc.remove(row) for row in to_remove]
+		doc.total_import_qty = sum([flt(d.quantity) for d in doc.imports])
+		doc.total_import_amount = sum([flt(d.cif_value) for d in doc.imports])
+		doc.save()
