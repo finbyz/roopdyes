@@ -40,7 +40,7 @@ def stock_entry_validate(self, method):
 		if self.purpose not in ['Material Transfer', 'Material Transfer for Manufacture']:
 			make_batches(self, 't_warehouse')
 			
-	if self.purpose == ['Repack','Manufacture'] and cint(self.from_ball_mill) != 1:
+	if self.purpose in ['Repack','Manufacture'] and cint(self.from_ball_mill) != 1:
 		self.get_stock_and_rate()
 
 @frappe.whitelist()
@@ -58,8 +58,16 @@ def make_transfer_batches(self):
 		has_batch_no = frappe.db.get_value('Item', row.item_code, 'has_batch_no')
 		if has_batch_no:
 			if row.batch_no:
-				if frappe.db.get_value("Batch", row.batch_no, 'valuation_rate') == row.valuation_rate:
-					continue
+				if row.valuation_rate == frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0)},"incoming_rate"):
+					if hasattr(self, 'send_to_party') and hasattr(row, 'party_concentration'):
+						if not self.send_to_party:
+							continue
+						if row.party_concentration == row.concentration:
+							continue
+					else:
+						continue	
+				else:
+					row.db_set('old_batch_no', row.batch_no)
 
 			batch = frappe.new_doc("Batch")
 			batch.item = row.item_code
@@ -132,6 +140,12 @@ def make_batches(self, warehouse_field):
 
 			has_batch_no = frappe.db.get_value('Item', row.item_code, 'has_batch_no')
 			if has_batch_no:
+				if row.batch_no and not frappe.db.exists("Stock Ledger Entry", {'company':self.company,'warehouse':row.get(warehouse_field),'batch_no':row.batch_no}):
+					continue
+
+				if row.batch_no and self.doctype == "Stock Entry":
+					row.db_set('old_batch_no', row.batch_no)
+
 				batch = frappe.new_doc("Batch")
 				batch.item = row.item_code
 				batch.supplier = getattr(self, 'supplier', None)
@@ -163,6 +177,8 @@ def delete_batches(self, warehouse):
 				frappe.db.set_value("Work Order", self.work_order, 'batch', '')
 
 			row.batch_no = ''
+			frappe.db.set_value('Batch',row.batch_no,'reference_name','')
+			row.db_set('batch_no', None)
 			#check_if_doc_is_linked(batch_no)
 			#frappe.delete_doc("Batch", batch_no.name)
 			row.db_set('batch_no', '')
