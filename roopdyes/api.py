@@ -1024,3 +1024,6 @@ def import_lic_cancel(self):
 		doc.total_import_qty = sum([flt(d.quantity) for d in doc.imports])
 		doc.total_import_amount = sum([flt(d.cif_value) for d in doc.imports])
 		doc.save()
+
+def delete_auto_created_batches(self):
+	pass
