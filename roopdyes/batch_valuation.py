@@ -58,7 +58,7 @@ def make_transfer_batches(self):
 		has_batch_no = frappe.db.get_value('Item', row.item_code, 'has_batch_no')
 		if has_batch_no:
 			if row.batch_no:
-				if row.valuation_rate == frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0)},"incoming_rate"):
+				if flt(row.valuation_rate,5) == flt(frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0),'is_cancelled':0},"incoming_rate"),5):
 					if hasattr(self, 'send_to_party') and hasattr(row, 'party_concentration'):
 						if not self.send_to_party:
 							continue
@@ -118,6 +118,7 @@ def update_stock_ledger_batch(self):
 			'voucher_no': self.name,
 			'voucher_detail_no': row.name,
 			'warehouse': row.t_warehouse,
+			'is_cancelled': 0
 		})
 
 		if sle:
@@ -140,7 +141,8 @@ def make_batches(self, warehouse_field):
 
 			has_batch_no = frappe.db.get_value('Item', row.item_code, 'has_batch_no')
 			if has_batch_no:
-				if row.batch_no and not frappe.db.exists("Stock Ledger Entry", {'company':self.company,'warehouse':row.get(warehouse_field),'batch_no':row.batch_no}):
+				# if row.batch_no and not frappe.db.exists("Stock Ledger Entry", {'company':self.company,'warehouse':row.get(warehouse_field),'batch_no':row.batch_no}):
+				if row.batch_no and flt(row.valuation_rate,5) == flt(frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get(warehouse_field),'batch_no':row.batch_no,'incoming_rate':('!=', 0),'is_cancelled':0},'incoming_rate'),5):
 					continue
 
 				if row.batch_no and self.doctype == "Stock Entry":
@@ -236,7 +238,8 @@ def get_batch_no(doctype, txt, searchfield, start, page_len, filters):
 				from `tabStock Ledger Entry` sle
 				    INNER JOIN `tabBatch` batch on sle.batch_no = batch.name
 				where
-					sle.item_code = %(item_code)s
+					sle.is_cancelled = 0 
+					and sle.item_code = %(item_code)s
 					and sle.warehouse = %(warehouse)s
 					and batch.docstatus < 2
 					and (sle.batch_no like %(txt)s or {searchfields})
@@ -326,7 +329,8 @@ def get_batch(doctype, txt, searchfield, start, page_len, filters):
 				from `tabStock Ledger Entry` sle
 				    INNER JOIN `tabBatch` batch on sle.batch_no = batch.name
 				where
-					sle.item_code = %(item_code)s
+					sle.is_cancelled = 0 
+					and sle.item_code = %(item_code)s
 					and sle.warehouse = %(warehouse)s
 					and batch.docstatus < 2
 					and (sle.batch_no like %(txt)s or {searchfields})

@@ -26,6 +26,7 @@ class BallMillDataSheet(Document):
 			if d.source_warehouse:
 				args = self.get_args_for_incoming_rate(d)
 				d.basic_rate = get_incoming_rate(args)
+				print(d.basic_rate)
 			elif not d.source_warehouse:
 				d.basic_rate = 0.0
 			elif self.warehouse and not d.basic_rate:
