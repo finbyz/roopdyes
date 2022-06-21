@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import flt, cint, cstr
 from frappe.desk.reportview import get_match_cond
-import datetime
+import datetime, math
 
 
 def batch_wise_cost():
@@ -58,7 +58,8 @@ def make_transfer_batches(self):
 		has_batch_no = frappe.db.get_value('Item', row.item_code, 'has_batch_no')
 		if has_batch_no:
 			if row.batch_no:
-				if flt(row.valuation_rate,5) == flt(frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0),'is_cancelled':0},"incoming_rate"),5):
+				if (round(row.valuation_rate,3) == round(frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0),'is_cancelled':0},"incoming_rate"),3)
+				or math.floor(row.valuation_rate) == math.floor(frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0),'is_cancelled':0},"incoming_rate"))):
 					if hasattr(self, 'send_to_party') and hasattr(row, 'party_concentration'):
 						if not self.send_to_party:
 							continue
@@ -67,6 +68,10 @@ def make_transfer_batches(self):
 					else:
 						continue	
 				else:
+					print(row.item_code)
+					print(flt(row.valuation_rate,5))
+					print(flt(frappe.db.get_value("Stock Ledger Entry", {'company':self.company,'warehouse':row.get('t_warehouse'),'batch_no':row.batch_no,'incoming_rate':('!=', 0),'is_cancelled':0},"incoming_rate"),5))
+
 					row.db_set('old_batch_no', row.batch_no)
 
 			batch = frappe.new_doc("Batch")
@@ -77,7 +82,7 @@ def make_transfer_batches(self):
 			batch.batch_yield = flt(row.batch_yield, 3)
 			batch.concentration = flt(row.concentration, 3)
 			batch.valuation_rate = flt(row.valuation_rate, 4)
-			batch.posting_date = datetime.datetime.strptime(self.posting_date, "%Y-%m-%d").strftime("%y%m%d")
+			batch.posting_date = (datetime.datetime.strptime(str(self.posting_date), "%Y-%m-%d").strftime("%y%m%d"))
 			batch.actual_quantity = flt(row.qty * row.conversion_factor)
 			batch.reference_doctype = self.doctype
 			batch.reference_name = self.name

@@ -92,6 +92,7 @@ def process_sle(self, sle):
 	if sle.batch_no and batch_wise_cost:
 		get_batch_values(self,sle)
 		self.wh_data.qty_after_transaction += flt(sle.actual_qty)
+		self.wh_data.qty_after_transaction = flt(self.wh_data.qty_after_transaction,4)
 		# if sle.voucher_type == "Stock Reconciliation":
 		# 	self.wh_data.qty_after_transaction = sle.qty_after_transaction
 		self.wh_data.stock_value = flt(self.wh_data.qty_after_transaction) * flt(self.wh_data.valuation_rate)

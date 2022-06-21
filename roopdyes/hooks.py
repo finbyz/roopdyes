@@ -196,6 +196,10 @@ scheduler_events = {
 	]
 }
 
+doctype_js = {
+	"Stock Entry": "public/js/doctype_js/stock_entry.js",
+}
+
 # Chemical Overrides
 
 from roopdyes.batch_valuation_overrides import get_supplied_items_cost,set_incoming_rate_buying,set_incoming_rate_selling,get_rate_for_return,get_incoming_rate,process_sle,get_args_for_incoming_rate

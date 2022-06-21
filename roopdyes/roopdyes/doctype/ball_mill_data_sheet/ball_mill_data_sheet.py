@@ -57,8 +57,8 @@ class BallMillDataSheet(Document):
 		se.stock_entry_type = "Repack"
 		se.set_posting_time = 1
 		se.company = self.company
-		se.posting_date = self.date
-		se.posting_time = nowtime()
+		se.posting_date = str(self.date)
+		se.posting_time = str(nowtime())
 		se.from_ball_mill = 1
 		for row in self.items:
 			se.append('items',{
