@@ -6,7 +6,9 @@ from __future__ import unicode_literals
 import frappe
 from frappe.model.document import Document
 
+
 class OutwardSamplePrint(Document):
+	@frappe.whitelist()
 	def get_samples(self):
 		where_clause = ''
 		where_clause += self.date and " and date = '%s' " % self.date or ''
