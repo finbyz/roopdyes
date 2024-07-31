@@ -113,7 +113,7 @@ def process_sle(self, sle):
 				self.qty_after_transaction += flt(sle.actual_qty)
 				self.stock_value = flt(self.qty_after_transaction) * flt(self.valuation_rate)
 			else:
-				self.get_fifo_values(sle)
+				# self.get_fifo_values(sle)
 				self.qty_after_transaction += flt(sle.actual_qty)
 				self.stock_value = sum((flt(batch[0]) * flt(batch[1]) for batch in self.stock_queue))
 

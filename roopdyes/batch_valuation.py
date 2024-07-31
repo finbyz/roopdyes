@@ -47,7 +47,7 @@ def stock_entry_validate(self, method):
 def stock_entry_on_submit(self, method):
 	if batch_wise_cost():
 		if self.purpose in ['Material Transfer', 'Material Transfer for Manufacture']:
-			make_transfer_batches(self)
+			# make_transfer_batches(self)
 			update_stock_ledger_batch(self)
 
 def make_transfer_batches(self):
