@@ -136,7 +136,9 @@ app_include_css = [
 override_whitelisted_methods = {
 	# "erpnext.manufacturing.doctype.bom_update_tool.bom_update_tool.enqueue_update_cost": "roopdyes.api.enqueue_update_cost"
 }
-
+override_doctype_class = {
+	"Ball Mill Data Sheet": "roopdyes.roopdyes.override.ball_mill_data_sheet.BallMillDataSheet",
+}
 
 doc_events = {
 	# "Stock Entry": {
