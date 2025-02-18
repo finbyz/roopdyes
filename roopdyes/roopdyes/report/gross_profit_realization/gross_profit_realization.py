@@ -455,9 +455,9 @@ class GrossProfitGenerator(object):
 		for row in self.si_list:
 
 			if (row.indent == 0 and indirect_expence_dict.get(row.invoice_or_item)):
-				si_amount_dict[row.invoice_or_item] = {'total_base_amount' : (row.base_amount - row.buying_amount), 'total_indirect_expence' : indirect_expence_dict.get(row.invoice_or_item)}
+				si_amount_dict[row.invoice_or_item] = {'total_base_amount' : (flt(row.base_amount) - flt(row.buying_amount)), 'total_indirect_expence' : indirect_expence_dict.get(row.invoice_or_item)}
 			elif indirect_expence_dict.get(row.parent) and self.filters.get("group_by") != "Invoice":
-				si_amount_dict[row.parent] = {'total_base_amount' : (row.base_amount - row.buying_amount), 'total_indirect_expence' : indirect_expence_dict.get(row.parent,0)}
+				si_amount_dict[row.parent] = {'total_base_amount' : (flt(row.base_amount) - flt(row.buying_amount)), 'total_indirect_expence' : indirect_expence_dict.get(row.parent,0)}
 
 		invoice_list = []
 
