@@ -200,7 +200,7 @@ def get_data(filters):
 	else:
 	    where_clause = " and currency != %s"
 	    where_params = ['INR']
-	
+	from_date, to_date = get_timespan_date_range(filters.timespan)
 	timespan_so_condition = " and so.transaction_date between %s and %s"
 	timespan_si_condition = " and si.posting_date between %s and %s"
 	timespan_params = [from_date, to_date]
