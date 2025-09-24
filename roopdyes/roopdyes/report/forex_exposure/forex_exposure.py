@@ -5,8 +5,9 @@ from __future__ import unicode_literals
 import frappe
 import datetime
 from frappe import _
-from frappe.utils import getdate
-from finbyz_dashboard.finbyz_dashboard.dashboard_overrides.data import get_timespan_date_range
+from frappe.utils import today, getdate
+from frappe.utils.dateutils import get_from_date_from_timespan, get_period_ending
+# from finbyz_dashboard.finbyz_dashboard.dashboard_overrides.data import get_timespan_date_range
 
 def execute(filters=None):
 	filters = frappe.parse_json(filters)
@@ -110,10 +111,18 @@ def get_columns():
 	
 def get_data(filters):
 	timespan_so_condition = timespan_si_condition = ''
-	if filters.get('timespan') and not filters.timespan == "":
-		from_date, to_date = get_timespan_date_range(filters.timespan)
-		timespan_so_condition = " and so.transaction_date between '{}' AND '{}'".format(from_date,to_date)
-		timespan_si_condition = " and si.posting_date between '{}' AND '{}'".format(from_date,to_date)
+	# if filters.get('timespan') and not filters.timespan == "":
+	# 	from_date, to_date = get_timespan_date_range(filters.timespan)
+	# 	timespan_so_condition = " and so.transaction_date between '{}' AND '{}'".format(from_date,to_date)
+	# 	timespan_si_condition = " and si.posting_date between '{}' AND '{}'".format(from_date,to_date)
+	if filters.get('timespan') and filters.timespan:
+	    to_date = getdate(today())  # Or use filters.get('to_date') if provided
+	    from_date = get_from_date_from_timespan(to_date, filters.timespan)
+	    
+	    # Adjust end date for "This X" timespans (e.g., end of month/quarter)
+	    end_date = get_period_ending(to_date, filters.timespan) if filters.timespan in [
+	        "This Month", "This Quarter", "This Year"
+	    ] else to_date
 
 	where_clause = ''
 	where_clause += filters.currency and " and currency = '%s'" % \
