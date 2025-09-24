@@ -8,6 +8,7 @@ from frappe import _
 from frappe.utils import today, getdate
 from frappe.utils.dateutils import get_from_date_from_timespan, get_period_ending
 # from finbyz_dashboard.finbyz_dashboard.dashboard_overrides.data import get_timespan_date_range
+from frappe.utils import today, getdate, add_days, add_months, add_years, get_first_day, get_last_day, get_first_day_of_week, get_last_day_of_week, get_year_start, get_year_ending, get_quarter_start, get_quarter_ending
 
 def execute(filters=None):
 	filters = frappe.parse_json(filters)
@@ -108,22 +109,86 @@ def get_columns():
 		},
 	]
 	return columns
-	
+
+def get_timespan_date_range(timespan, to_date=None):
+    if to_date is None:
+        to_date = getdate(today())
+    
+    from_date = to_date
+    
+    if timespan == "Today":
+        from_date = to_date
+    elif timespan == "Last Week":
+        from_date = get_first_day_of_week(add_days(to_date, -7))
+        to_date = get_last_day_of_week(add_days(to_date, -7))
+    elif timespan == "Last Month":
+        from_date = get_first_day(add_months(to_date, -1))
+        to_date = get_last_day(add_months(to_date, -1))
+    elif timespan == "Last Quarter":
+        from_date = get_quarter_start(add_months(to_date, -3))
+        to_date = get_quarter_ending(add_months(to_date, -3))
+    elif timespan == "Last 6 Months":
+        from_date = get_first_day(add_months(to_date, -6))
+        to_date = get_last_day(to_date)
+    elif timespan == "Last Year":
+        from_date = get_year_start(add_years(to_date, -1))
+        to_date = get_year_ending(add_years(to_date, -1))
+    elif timespan == "This Week":
+        from_date = get_first_day_of_week(to_date)
+        to_date = get_last_day_of_week(to_date)
+    elif timespan == "This Month":
+        from_date = get_first_day(to_date)
+        to_date = get_last_day(to_date)
+    elif timespan == "This Quarter":
+        from_date = get_quarter_start(to_date)
+        to_date = get_quarter_ending(to_date)
+    elif timespan == "This Year":
+        from_date = get_year_start(to_date)
+        to_date = get_year_ending(to_date)
+    elif timespan == "This Fiscal Year":
+        fiscal_year = frappe.get_cached_value("Global Defaults", None, "current_fiscal_year")
+        if fiscal_year:
+            fiscal_year_doc = frappe.get_cached_doc("Fiscal Year", fiscal_year)
+            from_date = fiscal_year_doc.year_start_date
+            to_date = fiscal_year_doc.year_end_date
+    elif timespan == "Next Week":
+        from_date = get_first_day_of_week(add_days(to_date, 7))
+        to_date = get_last_day_of_week(add_days(to_date, 7))
+    elif timespan == "Next Month":
+        from_date = get_first_day(add_months(to_date, 1))
+        to_date = get_last_day(add_months(to_date, 1))
+    elif timespan == "Next Quarter":
+        from_date = get_quarter_start(add_months(to_date, 3))
+        to_date = get_quarter_ending(add_months(to_date, 3))
+    elif timespan == "Next 6 Months":
+        from_date = get_first_day(add_months(to_date, 1))
+        to_date = get_last_day(add_months(to_date, 6))
+    elif timespan == "Next Year":
+        from_date = get_year_start(add_years(to_date, 1))
+        to_date = get_year_ending(add_years(to_date, 1))
+    
+    return from_date, to_date
+
 def get_data(filters):
 	timespan_so_condition = timespan_si_condition = ''
 	# if filters.get('timespan') and not filters.timespan == "":
 	# 	from_date, to_date = get_timespan_date_range(filters.timespan)
 	# 	timespan_so_condition = " and so.transaction_date between '{}' AND '{}'".format(from_date,to_date)
 	# 	timespan_si_condition = " and si.posting_date between '{}' AND '{}'".format(from_date,to_date)
-	if filters.get('timespan') and filters.timespan:
-	    to_date = getdate(today())  # Or use filters.get('to_date') if provided
-	    from_date = get_from_date_from_timespan(to_date, filters.timespan)
+	# if filters.get('timespan') and filters.timespan:
+	#     to_date = getdate(today())  # Or use filters.get('to_date') if provided
+	#     from_date = get_from_date_from_timespan(to_date, filters.timespan)
 	    
-	    # Adjust end date for "This X" timespans (e.g., end of month/quarter)
-	    end_date = get_period_ending(to_date, filters.timespan) if filters.timespan in [
-	        "This Month", "This Quarter", "This Year"
-	    ] else to_date
-
+	#     # Adjust end date for "This X" timespans (e.g., end of month/quarter)
+	#     end_date = get_period_ending(to_date, filters.timespan) if filters.timespan in [
+	#         "This Month", "This Quarter", "This Year"
+	#     ] else to_date
+	if filters.get('timespan') and filters.timespan:
+        from_date, to_date = get_timespan_date_range(filters.timespan)
+        timespan_so_condition = " and so.transaction_date between %s AND %s"
+        timespan_si_condition = " and si.posting_date between %s AND %s"
+        timespan_params = [from_date, to_date]
+	
 	where_clause = ''
 	where_clause += filters.currency and " and currency = '%s'" % \
 		filters.currency.replace("'","\'") or " and currency != 'INR'"
