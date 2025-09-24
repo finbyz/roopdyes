@@ -183,15 +183,27 @@ def get_data(filters):
 	#     end_date = get_period_ending(to_date, filters.timespan) if filters.timespan in [
 	#         "This Month", "This Quarter", "This Year"
 	#     ] else to_date
-	if filters.get('timespan') and filters.timespan:
-        from_date, to_date = get_timespan_date_range(filters.timespan)
-        timespan_so_condition = " and so.transaction_date between %s AND %s"
-        timespan_si_condition = " and si.posting_date between %s AND %s"
-        timespan_params = [from_date, to_date]
+	# if filters.get('timespan') and filters.timespan:
+ #        from_date, to_date = get_timespan_date_range(filters.timespan)
+ #        timespan_so_condition = " and so.transaction_date between %s AND %s"
+ #        timespan_si_condition = " and si.posting_date between %s AND %s"
+ #        timespan_params = [from_date, to_date]
 	
+	# where_clause = ''
+	# where_clause += filters.currency and " and currency = '%s'" % \
+	# 	filters.currency.replace("'","\'") or " and currency != 'INR'"
 	where_clause = ''
-	where_clause += filters.currency and " and currency = '%s'" % \
-		filters.currency.replace("'","\'") or " and currency != 'INR'"
+	where_params = []
+	if filters.get('currency'):
+	    where_clause = " and currency = %s"
+	    where_params = [filters.currency]
+	else:
+	    where_clause = " and currency != %s"
+	    where_params = ['INR']
+	
+	timespan_so_condition = " and so.transaction_date between %s and %s"
+	timespan_si_condition = " and si.posting_date between %s and %s"
+	timespan_params = [from_date, to_date]
 	
 	so_data = frappe.db.sql("""
 		select 
