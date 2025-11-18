@@ -42,6 +42,7 @@ def execute(filters=None):
 				"gross_profit",
 				"gross_profit_percent",
 				"project",
+				"sales_type",
 			],
 			"item_code": [
 				"item_code",
@@ -55,6 +56,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"warehouse": [
 				"warehouse",
@@ -65,6 +67,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"brand": [
 				"brand",
@@ -75,6 +78,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"item_group": [
 				"item_group",
@@ -85,6 +89,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"customer": [
 				"customer",
@@ -96,6 +101,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"customer_group": [
 				"customer_group",
@@ -106,6 +112,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"sales_person": [
 				"sales_person",
@@ -117,6 +124,7 @@ def execute(filters=None):
 				"buying_amount",
 				"gross_profit",
 				"gross_profit_percent",
+				"sales_type",
 			],
 			"project": ["project", "base_amount", "buying_amount", "gross_profit", "gross_profit_percent"],
 			"territory": [
@@ -371,6 +379,12 @@ def get_columns(group_wise_columns, filters):
 				"options": "territory",
 				"width": 100,
 			},
+			"sales_type":{
+				"label":_("Sales Type"),
+				"fieldname":"sales_type",
+				"fieldtype":"Data",
+				"Width":100,
+			},
 		}
 	)
 
@@ -398,6 +412,7 @@ def get_column_names():
 			"customer_group": "customer_group",
 			"posting_date": "posting_date",
 			"item_code": "item_code",
+			"sales_type":"sales_type",
 			"item_name": "item_name",
 			"item_group": "item_group",
 			"brand": "brand",
@@ -620,7 +635,7 @@ class GrossProfitGenerator(object):
 		returned_invoices = frappe.db.sql(
 			"""
 			select
-				si.name, si_item.item_code, si_item.stock_qty as qty, si_item.base_net_amount as base_amount, si.return_against
+				si.name, si_item.item_code, si_item.stock_qty as qty, si_item.base_net_amount as base_amount, si.return_against,si_item.sales_type
 			from
 				`tabSales Invoice` si, `tabSales Invoice Item` si_item
 			where
@@ -758,7 +773,7 @@ class GrossProfitGenerator(object):
 				`tabSales Invoice`.posting_date, `tabSales Invoice`.posting_time,
 				`tabSales Invoice`.project, `tabSales Invoice`.update_stock,
 				`tabSales Invoice`.customer, `tabSales Invoice`.customer_group,
-				`tabSales Invoice`.territory, `tabSales Invoice Item`.item_code,
+				`tabSales Invoice`.territory, `tabSales Invoice Item`.item_code,`tabSales Invoice Item`.sales_type,
 				`tabSales Invoice Item`.item_name, `tabSales Invoice Item`.description,
 				`tabSales Invoice Item`.warehouse, `tabSales Invoice Item`.item_group,
 				`tabSales Invoice Item`.brand, `tabSales Invoice Item`.dn_detail,
@@ -828,6 +843,7 @@ class GrossProfitGenerator(object):
 				"item_code": None,
 				"item_name": None,
 				"description": None,
+				"sales_type":None,
 				"warehouse": None,
 				"item_group": None,
 				"brand": None,
@@ -854,7 +870,7 @@ class GrossProfitGenerator(object):
 		)
 
 	def get_bundle_item_row(self, product_bundle, item):
-		item_name, description, item_group, brand = self.get_bundle_item_details(item.item_code)
+		item_name, description, item_group, brand,sales_type = self.get_bundle_item_details(item.item_code)
 
 		return frappe._dict(
 			{
@@ -870,6 +886,7 @@ class GrossProfitGenerator(object):
 				"item_code": item.item_code,
 				"item_name": item_name,
 				"description": description,
+				"sales_type":sales_type,
 				"warehouse": product_bundle.warehouse,
 				"item_group": item_group,
 				"brand": brand,
@@ -884,7 +901,7 @@ class GrossProfitGenerator(object):
 
 	def get_bundle_item_details(self, item_code):
 		return frappe.db.get_value(
-			"Item", item_code, ["item_name", "description", "item_group", "brand"]
+			"Item", item_code, ["item_name", "description", "item_group", "brand","sales_type"]
 		)
 
 	def load_stock_ledger_entries(self):
