@@ -289,12 +289,14 @@ def get_columns(group_wise_columns, filters):
 				"options": "warehouse",
 				"width": 100,
 			},
+
 			"sales_type":{
 				"label":_("Sales Type"),
 				"fieldname":"sales_type",
 				"fieldtype":"Data",
 				"Width":100,
 			},
+			
 			"qty": {"label": _("Qty"), "fieldname": "qty", "fieldtype": "Float", "width": 80},
 			"base_rate": {
 				"label": _("Avg. Selling Rate"),
