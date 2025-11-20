@@ -194,6 +194,12 @@ def get_columns(additional_table_columns, filters):
 		[
 			{"label": _("Description"), "fieldname": "description", "fieldtype": "Data", "width": 150},
 			{
+				"label": _("Sales Type"),
+				"fieldname": "sales_type",
+				"fieldtype": "Data",
+				"width": 100,
+        	},
+			{
 				"label": _("Invoice"),
 				"fieldname": "invoice",
 				"fieldtype": "Link",
@@ -707,12 +713,7 @@ def get_tax_accounts(
 			"width": 80,
 			"hidden": 1,
 		},
-		{
-            "label": _("Sales Type"),
-            "fieldname": "sales_type",
-            "fieldtype": "Data",
-            "width": 100,
-        },
+		
 	]
 
 	return itemised_tax, tax_columns
