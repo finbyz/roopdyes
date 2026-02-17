@@ -1,0 +1,413 @@
+# Copyright (c) 2026, FinByz Tech Pvt Ltd and contributors
+# For license information, please see license.txt
+
+import frappe
+from frappe import _
+from frappe.query_builder.functions import Sum
+from frappe.utils import add_days, cstr, flt, getdate
+
+import erpnext
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+	get_accounting_dimensions,
+	get_dimension_with_children,
+)
+from erpnext.accounts.report.financial_statements import (
+	filter_accounts,
+	filter_out_zero_value_rows,
+	set_gl_entries_by_account,
+)
+from erpnext.accounts.utils import get_fiscal_year, get_zero_cutoff
+
+value_fields = (
+	"opening_debit",
+	"opening_credit",
+	"debit",
+	"credit",
+	"closing_debit",
+	"closing_credit",
+)
+
+
+def execute(filters=None):
+	validate_filters(filters)
+	data = get_data(filters)
+	columns = get_columns()
+	return columns, data
+
+
+def validate_filters(filters):
+	if not filters.company:
+		frappe.throw(_("Company is required"))
+
+	if not filters.from_date:
+		filters.from_date = getdate(frappe.utils.today())
+
+	if not filters.to_date:
+		filters.to_date = getdate(frappe.utils.today())
+
+	filters.from_date = getdate(filters.from_date)
+	filters.to_date = getdate(filters.to_date)
+
+	if filters.from_date > filters.to_date:
+		frappe.throw(_("From Date cannot be greater than To Date"))
+
+	# Derive fiscal year from from_date
+	fiscal_year = get_fiscal_year(filters.from_date, company=filters.company)
+	filters.fiscal_year = fiscal_year[0]
+	filters.year_start_date = getdate(fiscal_year[1])
+	filters.year_end_date = getdate(fiscal_year[2])
+
+
+def get_data(filters):
+	accounts_condition = ""
+	if filters.get("accounts"):
+		lft, rgt = frappe.db.get_value("Account", filters.accounts, ["lft", "rgt"])
+		accounts_condition = " and lft >= {lft} and rgt <= {rgt}".format(lft=lft, rgt=rgt)
+
+	accounts = frappe.db.sql(
+		"""select name, account_number, parent_account, account_name, root_type, report_type, lft, rgt
+		from `tabAccount` where company=%s {condition} order by lft""".format(condition=accounts_condition),
+		filters.company,
+		as_dict=True,
+	)
+
+	company_currency = erpnext.get_company_currency(filters.company)
+
+	if not accounts:
+		return None
+
+	# When filtering by a group account, make it the root of the tree
+	if filters.get("accounts"):
+		for acc in accounts:
+			if acc.name == filters.accounts:
+				acc.parent_account = None
+				break
+
+	accounts, accounts_by_name, parent_children_map = filter_accounts(accounts)
+
+	gl_entries_by_account = {}
+
+	opening_balances = get_opening_balances(filters)
+
+	set_gl_entries_by_account(
+		filters.company,
+		filters.from_date,
+		filters.to_date,
+		filters,
+		gl_entries_by_account,
+		root_lft=None,
+		root_rgt=None,
+		ignore_closing_entries=True,
+		ignore_opening_entries=True,
+		group_by_account=True,
+	)
+
+	calculate_values(accounts, gl_entries_by_account, opening_balances)
+	accumulate_values_into_parents(accounts, accounts_by_name)
+
+	data = prepare_data(accounts, filters, parent_children_map, company_currency)
+	data = filter_out_zero_value_rows(data, parent_children_map)
+
+	return data
+
+
+def get_opening_balances(filters):
+	balance_sheet_opening = get_rootwise_opening_balances(filters, "Balance Sheet")
+	pl_opening = get_rootwise_opening_balances(filters, "Profit and Loss")
+
+	balance_sheet_opening.update(pl_opening)
+	return balance_sheet_opening
+
+
+def get_rootwise_opening_balances(filters, report_type):
+	gle = []
+
+	last_period_closing_voucher = ""
+	ignore_closing_balances = frappe.db.get_single_value(
+		"Accounts Settings", "ignore_account_closing_balance"
+	)
+
+	if not ignore_closing_balances:
+		last_period_closing_voucher = frappe.db.get_all(
+			"Period Closing Voucher",
+			filters={"docstatus": 1, "company": filters.company, "period_end_date": ("<", filters.from_date)},
+			fields=["period_end_date", "name"],
+			order_by="period_end_date desc",
+			limit=1,
+		)
+
+	accounting_dimensions = get_accounting_dimensions(as_list=False)
+
+	if last_period_closing_voucher:
+		gle = get_opening_balance(
+			"Account Closing Balance",
+			filters,
+			report_type,
+			accounting_dimensions,
+			period_closing_voucher=last_period_closing_voucher[0].name,
+		)
+
+		# Report generated from the mid of a fiscal year
+		if getdate(last_period_closing_voucher[0].period_end_date) < getdate(add_days(filters.from_date, -1)):
+			start_date = add_days(last_period_closing_voucher[0].period_end_date, 1)
+			gle += get_opening_balance(
+				"GL Entry",
+				filters,
+				report_type,
+				accounting_dimensions,
+				start_date=start_date,
+			)
+	else:
+		gle = get_opening_balance(
+			"GL Entry", filters, report_type, accounting_dimensions
+		)
+
+	opening = frappe._dict()
+	for d in gle:
+		opening.setdefault(
+			d.account,
+			{
+				"account": d.account,
+				"opening_debit": 0.0,
+				"opening_credit": 0.0,
+			},
+		)
+		opening[d.account]["opening_debit"] += flt(d.debit)
+		opening[d.account]["opening_credit"] += flt(d.credit)
+
+	return opening
+
+
+def get_opening_balance(
+	doctype,
+	filters,
+	report_type,
+	accounting_dimensions,
+	period_closing_voucher=None,
+	start_date=None,
+):
+	closing_balance = frappe.qb.DocType(doctype)
+	account = frappe.qb.DocType("Account")
+
+	opening_balance = (
+		frappe.qb.from_(closing_balance)
+		.select(
+			closing_balance.account,
+			closing_balance.account_currency,
+			Sum(closing_balance.debit).as_("debit"),
+			Sum(closing_balance.credit).as_("credit"),
+			Sum(closing_balance.debit_in_account_currency).as_("debit_in_account_currency"),
+			Sum(closing_balance.credit_in_account_currency).as_("credit_in_account_currency"),
+		)
+		.where(
+			(closing_balance.company == filters.company)
+			& (
+				closing_balance.account.isin(
+					frappe.qb.from_(account).select("name").where(account.report_type == report_type)
+				)
+			)
+		)
+		.groupby(closing_balance.account)
+	)
+
+	if period_closing_voucher:
+		opening_balance = opening_balance.where(
+			closing_balance.period_closing_voucher == period_closing_voucher
+		)
+	else:
+		if start_date:
+			opening_balance = opening_balance.where(
+				(closing_balance.posting_date >= start_date)
+				& (closing_balance.posting_date < filters.from_date)
+				& (closing_balance.is_opening == "No")
+			)
+		else:
+			opening_balance = opening_balance.where(
+				(closing_balance.posting_date < filters.from_date) | (closing_balance.is_opening == "Yes")
+			)
+
+	if doctype == "GL Entry":
+		opening_balance = opening_balance.where(closing_balance.is_cancelled == 0)
+
+	if report_type == "Profit and Loss" and doctype == "GL Entry":
+		opening_balance = opening_balance.where(closing_balance.posting_date >= filters.year_start_date)
+
+	# Exclude period closing voucher entries
+	if doctype == "Account Closing Balance":
+		opening_balance = opening_balance.where(closing_balance.is_period_closing_voucher_entry == 0)
+	else:
+		opening_balance = opening_balance.where(closing_balance.voucher_type != "Period Closing Voucher")
+
+	# Default finance book handling
+	opening_balance = opening_balance.where(
+		(closing_balance.finance_book.isin([""])) | (closing_balance.finance_book.isnull())
+	)
+
+	if accounting_dimensions:
+		for dimension in accounting_dimensions:
+			if filters.get(dimension.fieldname):
+				if frappe.get_cached_value("DocType", dimension.document_type, "is_tree"):
+					filters[dimension.fieldname] = get_dimension_with_children(
+						dimension.document_type, filters.get(dimension.fieldname)
+					)
+					opening_balance = opening_balance.where(
+						closing_balance[dimension.fieldname].isin(filters[dimension.fieldname])
+					)
+				else:
+					opening_balance = opening_balance.where(
+						closing_balance[dimension.fieldname].isin(filters[dimension.fieldname])
+					)
+
+	gle = opening_balance.run(as_dict=1)
+	return gle
+
+
+def calculate_values(accounts, gl_entries_by_account, opening_balances):
+	init = {
+		"opening_debit": 0.0,
+		"opening_credit": 0.0,
+		"debit": 0.0,
+		"credit": 0.0,
+		"closing_debit": 0.0,
+		"closing_credit": 0.0,
+	}
+
+	for d in accounts:
+		d.update(init.copy())
+
+		# add opening
+		d["opening_debit"] = opening_balances.get(d.name, {}).get("opening_debit", 0)
+		d["opening_credit"] = opening_balances.get(d.name, {}).get("opening_credit", 0)
+
+		for entry in gl_entries_by_account.get(d.name, []):
+			if cstr(entry.is_opening) != "Yes":
+				d["debit"] += flt(entry.debit)
+				d["credit"] += flt(entry.credit)
+
+		d["closing_debit"] = d["opening_debit"] + d["debit"]
+		d["closing_credit"] = d["opening_credit"] + d["credit"]
+
+
+def calculate_total_row(accounts, company_currency):
+	total_row = {
+		"account": "'" + _("Total") + "'",
+		"account_name": "'" + _("Total") + "'",
+		"warn_if_negative": True,
+		"opening_debit": 0.0,
+		"opening_credit": 0.0,
+		"debit": 0.0,
+		"credit": 0.0,
+		"closing_debit": 0.0,
+		"closing_credit": 0.0,
+		"parent_account": None,
+		"indent": 0,
+		"has_value": True,
+		"currency": company_currency,
+	}
+
+	for d in accounts:
+		if not d.parent_account:
+			for field in value_fields:
+				total_row[field] += d[field]
+
+	return total_row
+
+
+def accumulate_values_into_parents(accounts, accounts_by_name):
+	for d in reversed(accounts):
+		if d.parent_account:
+			for key in value_fields:
+				accounts_by_name[d.parent_account][key] += d[key]
+
+
+def prepare_data(accounts, filters, parent_children_map, company_currency):
+	data = []
+
+	for d in accounts:
+		has_value = False
+		row = {
+			"account": d.name,
+			"parent_account": d.parent_account,
+			"indent": d.indent,
+			"from_date": filters.from_date,
+			"to_date": filters.to_date,
+			"currency": company_currency,
+			"account_name": (
+				f"{d.account_number} - {d.account_name}" if d.account_number else d.account_name
+			),
+		}
+
+		for key in value_fields:
+			row[key] = flt(d.get(key, 0.0), 3)
+
+			if abs(row[key]) >= get_zero_cutoff(company_currency):
+				has_value = True
+
+		row["has_value"] = has_value
+		data.append(row)
+
+	total_row = calculate_total_row(accounts, company_currency)
+	data.extend([{}, total_row])
+
+	return data
+
+
+def get_columns():
+	return [
+		{
+			"fieldname": "account",
+			"label": _("Account"),
+			"fieldtype": "Link",
+			"options": "Account",
+			"width": 300,
+		},
+		{
+			"fieldname": "currency",
+			"label": _("Currency"),
+			"fieldtype": "Link",
+			"options": "Currency",
+			"hidden": 1,
+		},
+		{
+			"fieldname": "opening_debit",
+			"label": _("Opening (Dr)"),
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 120,
+		},
+		{
+			"fieldname": "opening_credit",
+			"label": _("Opening (Cr)"),
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 120,
+		},
+		{
+			"fieldname": "debit",
+			"label": _("Debit"),
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 120,
+		},
+		{
+			"fieldname": "credit",
+			"label": _("Credit"),
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 120,
+		},
+		{
+			"fieldname": "closing_debit",
+			"label": _("Closing (Dr)"),
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 120,
+		},
+		{
+			"fieldname": "closing_credit",
+			"label": _("Closing (Cr)"),
+			"fieldtype": "Currency",
+			"options": "currency",
+			"width": 120,
+		},
+	]
