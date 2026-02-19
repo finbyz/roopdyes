@@ -27,7 +27,7 @@ def get_columns():
 def get_data(filters):
 
     # ✅ Use Submitted invoices only
-    conditions = ["si.docstatus = 0"]
+    conditions = ["si.docstatus = 1"]
 
     if filters.get("company"):
         conditions.append("si.company = %(company)s")
